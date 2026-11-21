@@ -5,6 +5,7 @@ import Ingest from "./pages/Ingest.jsx";
 import Detect from "./pages/Detect.jsx";
 import History from "./pages/History.jsx";
 import Current from "./pages/Current.jsx";
+import Rebind from "./pages/Rebind.jsx";
 import Proofs from "./pages/Proofs.jsx";
 import Settings from "./pages/Settings.jsx";
 
@@ -14,6 +15,7 @@ const links = [
   ["/detect", "变更检测"],
   ["/history", "历史维"],
   ["/current", "当前镜"],
+  ["/rebind", "键改绑"],
   ["/proofs", "核证"],
   ["/settings", "站规"],
 ];
@@ -41,6 +43,7 @@ export default function App() {
           <Route path="/detect" element={<Detect />} />
           <Route path="/history" element={<History />} />
           <Route path="/current" element={<Current />} />
+          <Route path="/rebind" element={<Rebind />} />
           <Route path="/proofs" element={<Proofs />} />
           <Route path="/settings" element={<Settings />} />
         </Routes>

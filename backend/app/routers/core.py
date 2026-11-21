@@ -2,6 +2,7 @@ from fastapi import APIRouter, Body, HTTPException
 
 from app.db import connect
 from app.modules import STUBS
+from app.modules import business_key_rebind as rebind
 from app.services import catalog, detect, ingest, scd
 
 router = APIRouter(prefix="/api")
@@ -146,6 +147,72 @@ def run_scd(body: dict = Body(...)):
 @router.post("/proofs/rebuild")
 def rebuild_proofs():
     return scd.rebuild_proofs()
+
+
+# ---- 业务键改绑：维键重映射管道（非运营改名） ----
+
+_REBIND_ERR_HTTP = {
+    "bad_input": 400,
+    "not_found": 404,
+    "conflict": 409,
+    "simulated_fault": 200,  # 演练：回滚成功即达标，正常返回便于前端展示核证
+}
+
+
+@router.post("/rebind/apply")
+def rebind_apply(body: dict = Body(...)):
+    """改绑入口：old→new 一笔事务；冲突整次回滚（409），禁止半迁移。"""
+    conn = connect()
+    try:
+        result = rebind.apply_rebind(
+            conn,
+            body.get("old_store_id"),
+            body.get("new_store_id"),
+            body.get("reason", ""),
+            body.get("simulate_fault"),
+        )
+    finally:
+        conn.close()
+    if result["ok"]:
+        return result
+    status = _REBIND_ERR_HTTP.get(result["error"]["type"], 500)
+    if status == 200:
+        return result
+    raise HTTPException(status, result["error"]["detail"])
+
+
+@router.post("/rebind/run-fixture")
+def rebind_run_fixture(body: dict | None = Body(None)):
+    """一键跑改绑夹具；故意半迁移夹具条目须整笔回滚。"""
+    name = (body or {}).get("fixture", "rebind_store_key.json")
+    conn = connect()
+    try:
+        result = rebind.run_fixture(conn, name)
+    finally:
+        conn.close()
+    if result.get("error"):
+        raise HTTPException(404, result["error"])
+    return result
+
+
+@router.get("/rebind/mappings")
+def rebind_mappings():
+    """映射审计：键迁移表全量（跑次/old/new/时刻/段数）。"""
+    conn = connect()
+    try:
+        return rebind.list_mappings(conn)
+    finally:
+        conn.close()
+
+
+@router.get("/rebind/verify")
+def rebind_verify(old_store_id: str | None = None, new_store_id: str | None = None):
+    """键迁移核证（只读）：old/new、段数继承、旧键清空位、双键双镜禁态。"""
+    conn = connect()
+    try:
+        return rebind.verify(conn, old_store_id, new_store_id)
+    finally:
+        conn.close()
 
 
 @router.get("/settings")

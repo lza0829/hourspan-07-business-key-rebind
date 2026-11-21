@@ -11,6 +11,13 @@ def run_detect(batch_id: str | None = None):
     run_id = f"DET-{uuid4().hex[:8]}"
     now = now_iso()
     try:
+        # 键改绑协同：已被取代的旧键快照不再参与检测，防止旧键复活出第二面镜
+        superseded = {
+            r["old_store_id"]
+            for r in conn.execute(
+                "SELECT DISTINCT old_store_id FROM store_key_rebinds"
+            ).fetchall()
+        }
         if batch_id:
             snaps = conn.execute(
                 "SELECT * FROM source_snapshots WHERE batch_id=? ORDER BY store_id, as_of_ts",
@@ -29,6 +36,8 @@ def run_detect(batch_id: str | None = None):
 
         changes = []
         for snap in snaps:
+            if snap["store_id"] in superseded:
+                continue
             cur = conn.execute(
                 "SELECT * FROM dim_store_hours_current WHERE store_id=?",
                 (snap["store_id"],),

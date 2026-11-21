@@ -87,6 +87,17 @@ CREATE TABLE IF NOT EXISTS scd_proofs (
   created_at TEXT NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS store_key_rebinds (
+  id TEXT PRIMARY KEY,
+  old_store_id TEXT NOT NULL,
+  new_store_id TEXT NOT NULL,
+  reason TEXT NOT NULL DEFAULT '',
+  moved_hist_count INTEGER NOT NULL DEFAULT 0,
+  moved_current INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'applied',
+  created_at TEXT NOT NULL
+);
+
 CREATE INDEX IF NOT EXISTS idx_hist_store_current
   ON dim_store_hours_hist(store_id, is_current);
 CREATE INDEX IF NOT EXISTS idx_snap_store_ts
